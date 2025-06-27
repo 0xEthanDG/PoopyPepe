@@ -1,0 +1,16 @@
+canvas {
+  background: #70c5ce; /* sky blue */
+  display: block;
+  margin: 0 auto;
+  image-rendering: pixelated; /* crisp retro pixels */
+}
+
+/* Optional center container */
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: #222; /* letterbox */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+} 
