@@ -1,51 +1,60 @@
 # Flappy Pepe Game - Deployment Guide
 
-## GitHub Pages Deployment
+## ✅ Fixed GitHub Actions Deployment
 
-### Prerequisites
-- GitHub account
-- Repository pushed to GitHub
-- Node.js and npm installed locally
+### Current Status
+The GitHub Actions workflow has been fixed and uses the reliable `peaceiris/actions-gh-pages` action for deployment.
 
-### Step 1: Update Repository URL
-1. Replace `USERNAME` in `package.json` with your actual GitHub username:
-   ```json
-   "homepage": "https://YOUR_GITHUB_USERNAME.github.io/flappypepegametg"
-   ```
+### GitHub Pages Setup Instructions
 
-### Step 2: Install Dependencies and Deploy
-```bash
-# Install dependencies (including gh-pages)
-npm install
+#### Step 1: Configure GitHub Pages
+1. Go to your repository: **`https://github.com/0xEthanDG/PoopyPepe`**
+2. Click **Settings** → **Pages** (in the left sidebar)
+3. Under **"Build and deployment"** → **"Source"**
+4. Select **"Deploy from a branch"**
+5. Under **"Branch"**, select **"gh-pages"**
+6. Select folder: **"/ (root)"**
+7. Click **Save**
 
-# Build and deploy to GitHub Pages
-npm run deploy
-```
+#### Step 2: Monitor Deployment
+1. Go to the **Actions** tab in your repository
+2. The workflow will automatically run after each push to main
+3. Wait for the "Deploy to GitHub Pages" workflow to complete
+4. The workflow will create a `gh-pages` branch with your built site
 
-### Step 3: Configure GitHub Pages
-1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Pages**
-3. Under **Source**, select **Deploy from a branch**
-4. Select branch: `gh-pages`
-5. Select folder: `/ (root)`
-6. Click **Save**
-
-### Step 4: Access Your Game
-Your game will be available at: `https://YOUR_GITHUB_USERNAME.github.io/flappypepegametg`
+### 🌐 Your Game URL
+Once deployed, your game will be available at:
+**`https://0xEthanDG.github.io/PoopyPepe`**
 
 ---
 
-## Alternative: GitHub Actions Deployment
+## Manual Deployment Alternative
 
-For automated deployment on every push to main:
+If you prefer manual deployment:
 
-### Step 1: Enable GitHub Actions
-1. The workflow file `.github/workflows/deploy.yml` is already configured
-2. Go to repository **Settings** → **Pages**
-3. Under **Source**, select **GitHub Actions**
+```bash
+# Install dependencies
+npm install
 
-### Step 2: Push to Main Branch
-The deployment will happen automatically on every push to the main branch.
+# Build and deploy manually
+npm run deploy
+```
+
+---
+
+## GitHub Actions Workflow Details
+
+The current workflow (`.github/workflows/deploy.yml`):
+- ✅ Runs on every push to main branch
+- ✅ Installs Node.js 18 and dependencies
+- ✅ Builds the React app
+- ✅ Deploys to `gh-pages` branch using `peaceiris/actions-gh-pages`
+
+### What Was Fixed:
+1. **Replaced complex GitHub Pages Actions** with proven `peaceiris/actions-gh-pages`
+2. **Combined build and deploy** into single job for reliability
+3. **Removed problematic permissions** that were causing deployment failures
+4. **Simplified workflow** for consistent deployment
 
 ---
 
@@ -63,7 +72,7 @@ The deployment will happen automatically on every push to the main branch.
    - **Title**: `Flappy Pepe Game`
    - **Description**: `A fun flappy bird style game with Pepe`
    - **Photo**: Upload game screenshot (optional)
-   - **Web App URL**: `https://YOUR_GITHUB_USERNAME.github.io/flappypepegametg`
+   - **Web App URL**: `https://0xEthanDG.github.io/PoopyPepe`
 
 ### Step 3: Test Your Mini App
 1. Open your bot in Telegram
@@ -72,65 +81,35 @@ The deployment will happen automatically on every push to the main branch.
 
 ---
 
-## Mobile Optimization Features
-
-### ✅ Implemented Features
-- **Touch Controls**: Game responds to touch/tap input
-- **Responsive Design**: Adapts to different screen sizes
-- **Mobile Viewport**: Optimized for mobile browsers
-- **Telegram Integration**: Full Telegram Mini App SDK support
-- **Performance**: Optimized for mobile devices
-- **Fullscreen Display**: Immersive gaming experience
-
-### Technical Features
-- **HTTPS Ready**: All assets served over HTTPS
-- **Mobile-First CSS**: Responsive design patterns
-- **Touch Optimization**: Prevents zoom, scrolling, and selection
-- **High DPI Support**: Crisp graphics on retina displays
-- **Orientation Support**: Works in both portrait and landscape
-
----
-
 ## Troubleshooting
 
-### Common Issues
+### GitHub Actions Failing?
+1. Check the Actions tab for error logs
+2. Ensure the workflow file is in `.github/workflows/deploy.yml`
+3. Verify the repository has Actions enabled in Settings → Actions
 
-**Issue**: Game doesn't load in Telegram
-- **Solution**: Ensure your GitHub Pages URL is working and serving over HTTPS
+### 404 Error on GitHub Pages?
+1. Ensure GitHub Pages is set to deploy from `gh-pages` branch
+2. Wait 5-10 minutes after first deployment
+3. Check that `index.html` exists in the `gh-pages` branch
 
-**Issue**: Touch controls don't work
-- **Solution**: Make sure the site is served over HTTPS (required for touch events in Telegram)
-
-**Issue**: Game is cut off on mobile
-- **Solution**: The CSS includes responsive scaling - if issues persist, check browser developer tools
-
-**Issue**: Deploy command fails
-- **Solution**: Make sure you've committed all changes and have the correct repository permissions
-
-### Testing Locally
-```bash
-# Start development server
-npm start
-
-# Build production version
-npm run build
-
-# Serve build locally (install serve globally: npm install -g serve)
-serve -s build
-```
+### Game Not Loading?
+1. Check browser console for errors
+2. Verify all assets load over HTTPS
+3. Test on different devices and browsers
 
 ---
 
 ## Final Checklist
 
-- [ ] Updated `homepage` in `package.json` with correct GitHub username
-- [ ] Ran `npm install` to install gh-pages dependency
-- [ ] Deployed with `npm run deploy` or set up GitHub Actions
-- [ ] Confirmed game loads at GitHub Pages URL
+- [x] GitHub Actions workflow fixed and deployed ✅
+- [ ] GitHub Pages configured to use `gh-pages` branch
+- [ ] Workflow completes successfully (check Actions tab)  
+- [ ] Game loads at `https://0xEthanDG.github.io/PoopyPepe`
 - [ ] Created Telegram bot with @BotFather
 - [ ] Configured mini app with correct URL
 - [ ] Tested game launch from Telegram
 
-**Final URL Format**: `https://YOUR_GITHUB_USERNAME.github.io/flappypepegametg`
+**Final URL**: `https://0xEthanDG.github.io/PoopyPepe`
 
 This URL should be used as your **Web App URL** when configuring your Telegram Mini App with @BotFather. 
