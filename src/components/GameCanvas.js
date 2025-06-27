@@ -22,10 +22,10 @@ const GRAVITY = 0.35;   // px / frame^2 at 60 fps (increased for faster falling)
 const JUMP_VELOCITY = -5.8; // upward impulse (px / frame, increased for stronger flaps)
 const MAX_FALL_SPEED = 9;   // terminal velocity downward (increased for faster descent)
 
-const PIPE_SPEED = 4.025; // horizontal px / frame (scaled 2x) - increased by 15% for smoother gameplay
+// Synchronized scroll system - single speed for perfect alignment
+const SCROLL_SPEED = 4.025; // horizontal px / frame (scaled 2x) - increased by 15% for smoother gameplay
 const PIPE_INTERVAL = 350; // distance between pipes (reduced for more frequent obstacles)
 const PIPE_GAP = 162.5;   // vertical gap size (increased by 25% for better balance)
-const GROUND_SPEED = 4.025; // ground scroll speed (synchronized with pipes for consistent speed)
 const CLOUD_SPEED = 1.84; // cloud scroll speed (increased proportionally with scroll speed)
 
 const PLUSHPEPE_X = 160;     // fixed horizontal plushpepe position (scaled 2x)
@@ -526,6 +526,9 @@ export default function GameCanvas() {
   const CLOUD_SPAWN_VARIANCE = 0; // no variance - exactly every 7 seconds
   const CLOUD_SIZE = 64; // cloud display size (64x64 pixels)
   
+  // Shared scroll system for perfect synchronization
+  const sharedScrollPosition = useRef(0); // Master scroll position for all elements
+  
   // Ground scrolling animation
   const groundOffset = useRef(0);
   
@@ -621,7 +624,8 @@ export default function GameCanvas() {
     
     if (gameStateRef.current !== 'playing') return;
 
-    // Simplified update function
+    // Shared scroll system - update master scroll position
+    sharedScrollPosition.current += SCROLL_SPEED * step;
 
     // PlushPepe physics
     plushpepe.current.vel += GRAVITY * step;
@@ -646,26 +650,21 @@ export default function GameCanvas() {
       return; // Stop processing this frame
     }
 
-    // Ground scrolling update
-    groundOffset.current -= GROUND_SPEED * step;
-    // Reset ground offset when it scrolls one full tile width (for seamless looping)
+    // Ground scrolling - synchronized with shared scroll position
+    // Calculate ground tile dimensions for precise looping
+    let effectiveTileWidth = V_WIDTH; // fallback
     if (imagesLoaded.current && groundImg.current) {
-      // Calculate scaled width for proper looping - must match rendering calculation
       const sourceWidth = groundImg.current.width;
       const sourceHeight = groundImg.current.height;
       const scaledWidth = Math.floor((sourceWidth / sourceHeight) * 224);
       const TILE_OVERLAP = 2;
-      const effectiveTileWidth = scaledWidth - TILE_OVERLAP;
-      
-      if (groundOffset.current <= -effectiveTileWidth) {
-        groundOffset.current = 0;
-      }
-    } else {
-      // Fallback for when image isn't loaded yet
-      if (groundOffset.current <= -V_WIDTH) {
-        groundOffset.current = 0;
-      }
+      effectiveTileWidth = scaledWidth - TILE_OVERLAP;
     }
+    
+    // Use shared scroll position with precise modulo for seamless looping
+    // Round to prevent floating-point drift and ensure pixel-perfect alignment
+    const preciseScrollPosition = Math.round(sharedScrollPosition.current * 100) / 100; // Round to 2 decimal places
+    groundOffset.current = -(preciseScrollPosition % effectiveTileWidth);
 
     // Cloud spawning and updates
     cloudSpawnTimer.current += step;
@@ -694,9 +693,10 @@ export default function GameCanvas() {
     // Remove clouds that have moved off-screen
     clouds.current = clouds.current.filter(cloud => cloud.x > -200);
 
-    // Pipe updates
+    // Pipe updates - synchronized with shared scroll position
     pipes.current.forEach((pipe, index) => {
-      pipe.x -= PIPE_SPEED * step;
+      // Update pipe position using shared scroll speed (already applied above)
+      pipe.x -= SCROLL_SPEED * step;
       
       // Score - check if plushpepe has passed through pipe
       if (!pipe.scored && pipe.x < PLUSHPEPE_X - PLUSHPEPE_HITBOX/2) {
@@ -1021,7 +1021,8 @@ export default function GameCanvas() {
     clouds.current = [];
     cloudSpawnTimer.current = 0;
     
-    // Reset ground scrolling animation
+    // Reset shared scroll system and ground animation
+    sharedScrollPosition.current = 0;
     groundOffset.current = 0;
     
     // Reset fart effect
