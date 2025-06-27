@@ -68,20 +68,34 @@ function getFartOpacity(timeRemaining) {
   }
 }
 
-/* ====== Helper: random Y for pipe gap with vertical jitter ====== */
-function randomGapY() {
+/* ====== Helper: random Y for pipe gap with vertical jitter and traversal constraints ====== */
+function randomGapY(previousGapY = null) {
   const minGapTop = 120;   // min distance from top (scaled 2x)
   const maxGapTop = 520;   // max distance from top - ensures reasonable bottom pipe height
-  const baseGapY = Math.floor(Math.random() * (maxGapTop - minGapTop + 1)) + minGapTop;
+  const MAX_VERTICAL_DELTA = 135; // Maximum vertical distance between consecutive gaps (playable constraint)
   
-  // Add vertical jitter (±10px) for unpredictability
-  const jitter = Math.floor(Math.random() * 21) - 10; // -10 to +10 pixels
-  const gapY = Math.max(minGapTop, Math.min(maxGapTop, baseGapY + jitter));
+  let targetGapY;
   
-  // Debug logging to track pipe generation
-  console.log(`🔧 Generated gap at Y=${gapY} (base: ${baseGapY}, jitter: ${jitter}), gap size=${PIPE_GAP}`);
+  if (previousGapY !== null) {
+    // Constrain next gap to be within reachable distance of previous gap
+    const minConstrainedY = Math.max(minGapTop, previousGapY - MAX_VERTICAL_DELTA);
+    const maxConstrainedY = Math.min(maxGapTop, previousGapY + MAX_VERTICAL_DELTA);
+    
+    // Generate random position within constrained range
+    targetGapY = Math.floor(Math.random() * (maxConstrainedY - minConstrainedY + 1)) + minConstrainedY;
+    
+    console.log(`🔧 Constrained gap: prev=${previousGapY}, range=[${minConstrainedY}-${maxConstrainedY}], new=${targetGapY}, delta=${Math.abs(targetGapY - previousGapY)}`);
+  } else {
+    // First gap or no constraint - use full range
+    targetGapY = Math.floor(Math.random() * (maxGapTop - minGapTop + 1)) + minGapTop;
+    console.log(`🔧 Initial gap at Y=${targetGapY} (unconstrained)`);
+  }
   
-  return gapY;
+  // Add small vertical jitter (±8px) for unpredictability while maintaining playability
+  const jitter = Math.floor(Math.random() * 17) - 8; // -8 to +8 pixels
+  const finalGapY = Math.max(minGapTop, Math.min(maxGapTop, targetGapY + jitter));
+  
+  return finalGapY;
 }
 
 /* ====== Helper: Draw pipe with shaft and cap assets ====== */
@@ -376,11 +390,12 @@ export default function GameCanvas() {
   
   // Debug: Log initial spawn position
   console.log(`🐸 PlushPepe spawn position: Y=${V_HEIGHT / 2 - 100} (Canvas: ${V_WIDTH}x${V_HEIGHT})`);
-  // Pipes array (recycled) - start with random gaps for variety
+  // Pipes array (recycled) - start with constrained gaps for playability
+  const firstGapY = randomGapY(); // First gap is unconstrained
   const pipes = useRef([
-    { x: V_WIDTH + 50, gapY: randomGapY(), scored: false }, // Random gap
-    { x: V_WIDTH + 50 + PIPE_INTERVAL, gapY: randomGapY(), scored: false }, // Random gap
-    { x: V_WIDTH + 50 + PIPE_INTERVAL * 2, gapY: randomGapY(), scored: false } // Random gap
+    { x: V_WIDTH + 50, gapY: firstGapY, scored: false }, // First gap
+    { x: V_WIDTH + 50 + PIPE_INTERVAL, gapY: randomGapY(firstGapY), scored: false }, // Constrained to first
+    { x: V_WIDTH + 50 + PIPE_INTERVAL * 2, gapY: randomGapY(randomGapY(firstGapY)), scored: false } // Constrained to second
   ]);
   
   // Clouds array for background parallax effect
@@ -572,7 +587,12 @@ export default function GameCanvas() {
       // Recycle pipe
       if (pipe.x + PIPE_WIDTH < 0) {
         pipe.x += PIPE_INTERVAL * pipes.current.length;
-        pipe.gapY = randomGapY(); // Only use random gaps when recycling
+        
+        // Find the rightmost pipe to get its gap Y for constrained generation
+        const rightmostPipe = pipes.current.reduce((rightmost, p) => 
+          p.x > rightmost.x ? p : rightmost, pipes.current[0]);
+        
+        pipe.gapY = randomGapY(rightmostPipe.gapY); // Use constrained gap generation
         pipe.scored = false;
       }
     });
@@ -867,12 +887,14 @@ export default function GameCanvas() {
     // Reset plushpepe to safe starting position above ground
     plushpepe.current = { y: V_HEIGHT / 2 - 100, vel: 0, rot: 0 }; // Safe position in upper half of screen
     
-    // Reset pipes with random gaps for variety
-    pipes.current = pipes.current.map((_, idx) => ({
-      x: V_WIDTH + 50 + PIPE_INTERVAL * idx,
-      gapY: randomGapY(), // Use random gaps from the start
-      scored: false,
-    }));
+    // Reset pipes with constrained gaps for playability
+    const resetFirstGapY = randomGapY(); // First gap is unconstrained
+    const resetSecondGapY = randomGapY(resetFirstGapY); // Second constrained to first
+    pipes.current = [
+      { x: V_WIDTH + 50, gapY: resetFirstGapY, scored: false },
+      { x: V_WIDTH + 50 + PIPE_INTERVAL, gapY: resetSecondGapY, scored: false },
+      { x: V_WIDTH + 50 + PIPE_INTERVAL * 2, gapY: randomGapY(resetSecondGapY), scored: false }
+    ];
     
     // Reset clouds
     clouds.current = [];
