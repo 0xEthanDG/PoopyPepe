@@ -832,12 +832,7 @@ export default function GameCanvas() {
     // Display current score
     ctx.fillText(globalScore, V_WIDTH / 2, 100); // scaled 2x
 
-    // Build version indicator for Telegram Mini App verification
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.font = '24px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('v2.1-TG-PERF', 10, V_HEIGHT - 10); // Bottom-left build indicator
-    ctx.textAlign = 'center'; // Reset text align
+    // Build version indicator removed for production
 
     // Ready / GameOver overlays
     if (gameStateRef.current === 'ready') {
