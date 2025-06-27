@@ -32,7 +32,7 @@ const PLUSHPEPE_X = 160;     // fixed horizontal plushpepe position (scaled 2x)
 const PLUSHPEPE_SIZE = 96;   // PlushPepe sprite size (scaled 2x for high resolution)
 const PLUSHPEPE_HITBOX = 48; // PlushPepe collision box (scaled 2x)
 const PIPE_WIDTH = 104; // sprite width (scaled 2x)
-const PIPE_CAP_HEIGHT = 48; // height of the pipe cap (will be adjusted based on actual image)
+// PIPE_CAP_HEIGHT removed - dynamically calculated from image aspect ratio
 
 // Game constants: PLUSHPEPE_X=160, PIPE_WIDTH=104
 // Ground height will be calculated from the actual sprite dimensions
@@ -42,7 +42,7 @@ let GROUND_HEIGHT = 224; // default fallback, will be updated when ground sprite
 const FART_DURATION = 30; // frames (0.5 seconds at 60fps)
 const FART_FADE_IN_DURATION = 6; // frames (0.1 seconds at 60fps)
 const FART_FADE_OUT_DURATION = 6; // frames (0.1 seconds at 60fps)
-const FART_FULL_OPACITY_DURATION = FART_DURATION - FART_FADE_IN_DURATION - FART_FADE_OUT_DURATION; // 18 frames (0.3 seconds)
+// FART_FULL_OPACITY_DURATION removed - calculated inline for better performance
 const FART_SIZE_RATIO = 0.8; // 80% of Pepe's size
 const FART_OFFSET_X = -15; // pixels behind Pepe's visible edge (left side)
 const FART_OFFSET_Y = 35;  // pixels below Pepe's center (bottom-left area)
@@ -412,11 +412,32 @@ export default function GameCanvas() {
     window.addEventListener('resize', resizeCanvas);
 
     let lastTime = 0;
+    // Optimize for Telegram Mini App performance
+    let frameCount = 0;
+    let lastFpsCheck = performance.now();
+    
     function loop(timestamp) {
-      const delta = (timestamp - lastTime) || 16; // ms
-      lastTime = timestamp;
-      update(delta / (1000 / 60)); // convert to ~frames
+      const now = timestamp || performance.now();
+      const delta = Math.min(now - lastTime, 32); // Cap at 32ms (30fps minimum)
+      lastTime = now;
+      
+      // Use time-based movement for consistent speed across devices
+      const timeStep = delta / 16.67; // Normalize to 60fps baseline
+      
+      update(timeStep);
       draw(ctx);
+      
+      // FPS monitoring for Telegram Mini App optimization
+      frameCount++;
+      if (now - lastFpsCheck >= 1000) {
+        const currentFps = frameCount / ((now - lastFpsCheck) / 1000);
+        if (currentFps < 45) {
+          console.log(`⚠️ Low FPS detected: ${currentFps.toFixed(1)} - Telegram Mini App optimization active`);
+        }
+        frameCount = 0;
+        lastFpsCheck = now;
+      }
+      
       requestAnimationFrame(loop);
     }
     requestAnimationFrame(loop);
@@ -594,34 +615,36 @@ export default function GameCanvas() {
 
   /* ===== Draw ===== */
   function draw(ctx) {
-    // Clear
+    // Performance optimization for Telegram Mini App
+    ctx.save();
+    
+    // Clear with optimized method
     ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
-
+    
+    // Set global rendering optimizations for Telegram webview
+    ctx.imageSmoothingEnabled = false; // Disable for all draws - better performance
+    
     // Background (placeholder sky already set in CSS)
 
     // RENDERING ORDER: Clouds → Ground → Grass → Pipes → Player
 
-    // 1. CLOUDS - Background layer with parallax effect
+    // 1. CLOUDS - Background layer with parallax effect (optimized)
     if (imagesLoaded.current && cloudImg.current) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
-      
+      // Only draw visible clouds to improve performance
       clouds.current.forEach((cloud) => {
-        ctx.drawImage(
-          cloudImg.current,
-          0, 0, cloudImg.current.width, cloudImg.current.height, // source (full sprite)
-          cloud.x, cloud.y, CLOUD_SIZE, CLOUD_SIZE // destination (scaled to 64x64)
-        );
+        // Cull off-screen clouds for better performance
+        if (cloud.x + CLOUD_SIZE > 0 && cloud.x < V_WIDTH) {
+          ctx.drawImage(
+            cloudImg.current,
+            0, 0, cloudImg.current.width, cloudImg.current.height, // source (full sprite)
+            Math.round(cloud.x), Math.round(cloud.y), CLOUD_SIZE, CLOUD_SIZE // destination (rounded for performance)
+          );
+        }
       });
-      
-      ctx.restore();
     }
 
-    // 2. GROUND LAYER - Base dirt layer at bottom of screen
+    // 2. GROUND LAYER - Base dirt layer (optimized for Telegram)
     if (imagesLoaded.current && groundImg.current) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
-      
       // Anchor ground to the very bottom edge of canvas
       const FIXED_GROUND_HEIGHT = 224;
       const groundY = V_HEIGHT - FIXED_GROUND_HEIGHT; // Ground starts at Y=800
@@ -632,29 +655,18 @@ export default function GameCanvas() {
       
       // Use precise scaling to maintain exact pixel alignment
       const scaledWidth = Math.floor((sourceWidth / sourceHeight) * FIXED_GROUND_HEIGHT);
-      const tilesNeeded = Math.ceil(V_WIDTH / scaledWidth) + 3; // Extra tiles for safety
+      const tilesNeeded = Math.ceil(V_WIDTH / scaledWidth) + 2; // Reduced safety margin for performance
       const TILE_OVERLAP = 2; // Overlap tiles by 2px to prevent gaps
       
+      // Optimized single-pass ground rendering
       for (let i = 0; i < tilesNeeded; i++) {
-        const tileX = groundOffset.current + (i * (scaledWidth - TILE_OVERLAP));
+        const tileX = Math.round(groundOffset.current + (i * (scaledWidth - TILE_OVERLAP)));
         ctx.drawImage(
           groundImg.current, 
           0, 0, sourceWidth, sourceHeight,    // source (full sprite)
           tileX, groundY, scaledWidth + TILE_OVERLAP, FIXED_GROUND_HEIGHT  // destination with overlap
         );
       }
-      
-      // Backup overpaint to ensure no blue sky shows below ground
-      for (let i = 0; i < tilesNeeded; i++) {
-        const tileX = groundOffset.current + (i * (scaledWidth - TILE_OVERLAP));
-        ctx.drawImage(
-          groundImg.current,
-          0, 0, sourceWidth, sourceHeight,
-          tileX, V_HEIGHT - 2, scaledWidth + TILE_OVERLAP, 2 // cover the last 2px with overlap
-        );
-      }
-      
-      ctx.restore();
     } else {
       // Fallback to placeholder rectangle while loading
       const FIXED_GROUND_HEIGHT = 224;
@@ -662,11 +674,8 @@ export default function GameCanvas() {
       ctx.fillRect(0, V_HEIGHT - FIXED_GROUND_HEIGHT, V_WIDTH, FIXED_GROUND_HEIGHT); // Perfect alignment
     }
 
-    // 3. GRASS LAYER - Sits directly on top of dirt, no position changes
+    // 3. GRASS LAYER - Optimized for Telegram performance  
     if (imagesLoaded.current && grassImg.current) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering
-      
       // Position grass to sit flush on top of the existing dirt layer
       const FIXED_GROUND_HEIGHT = 224;
       const dirtTopY = V_HEIGHT - FIXED_GROUND_HEIGHT; // Y=800, top of dirt layer
@@ -679,41 +688,37 @@ export default function GameCanvas() {
       const grassY = dirtTopY; // Start grass right at the top edge of dirt
       
       // Calculate how many grass tiles we need across the width
-      const tilesNeeded = Math.ceil(V_WIDTH / grassSourceWidth) + 2; // Extra tiles for scrolling
+      const tilesNeeded = Math.ceil(V_WIDTH / grassSourceWidth) + 1; // Reduced for performance
       
       for (let i = 0; i < tilesNeeded; i++) {
-        const tileX = groundOffset.current + (i * grassSourceWidth);
+        const tileX = Math.round(groundOffset.current + (i * grassSourceWidth));
         ctx.drawImage(
           grassImg.current,
           0, 0, grassSourceWidth, grassSourceHeight,    // source (full sprite)
           tileX, grassY, grassSourceWidth, grassSourceHeight  // positioned at top of dirt
         );
       }
-      
-      ctx.restore();
     }
 
-    // 4. PIPES - Bottom pipes connect to ground level (unchanged)
+    // 4. PIPES - Optimized rendering for Telegram performance
     if (imagesLoaded.current && pipeShaftImg.current && pipeCapImg.current) {
       pipes.current.forEach((p) => {
-        // Calculate pipe heights - bottom pipes connect to ground level
-        const FIXED_GROUND_HEIGHT = 224;
-        const actualGroundY = V_HEIGHT - FIXED_GROUND_HEIGHT; // Ground starts at Y=800
-        
-        const topPipeHeight = p.gapY;
-        const bottomPipeHeight = Math.max(0, actualGroundY - (p.gapY + PIPE_GAP));
-        
-        // Debug logging for pipe heights
-        if (p.x > V_WIDTH - 50 && p.x < V_WIDTH + 50) { // Only log for pipes near the right edge
-          console.log(`🔧 Pipe at X=${Math.round(p.x)}: gap Y=${p.gapY}, top height=${topPipeHeight}, bottom height=${bottomPipeHeight}, bottom starts at Y=${p.gapY + PIPE_GAP}`);
-        }
-        
-        // Draw top pipe (upside down)
-        drawPipeWithAssets(ctx, pipeShaftImg.current, pipeCapImg.current, p.x, 0, PIPE_WIDTH, topPipeHeight, true);
-        
-        // Draw bottom pipe (normal orientation) - connects to ground level
-        if (bottomPipeHeight > 0) {
-          drawPipeWithAssets(ctx, pipeShaftImg.current, pipeCapImg.current, p.x, p.gapY + PIPE_GAP, PIPE_WIDTH, bottomPipeHeight, false);
+        // Only render visible pipes for better performance
+        if (p.x + PIPE_WIDTH > 0 && p.x < V_WIDTH) {
+          // Calculate pipe heights - bottom pipes connect to ground level
+          const FIXED_GROUND_HEIGHT = 224;
+          const actualGroundY = V_HEIGHT - FIXED_GROUND_HEIGHT; // Ground starts at Y=800
+          
+          const topPipeHeight = p.gapY;
+          const bottomPipeHeight = Math.max(0, actualGroundY - (p.gapY + PIPE_GAP));
+          
+          // Draw top pipe (upside down) with rounded position
+          drawPipeWithAssets(ctx, pipeShaftImg.current, pipeCapImg.current, Math.round(p.x), 0, PIPE_WIDTH, topPipeHeight, true);
+          
+          // Draw bottom pipe (normal orientation) - connects to ground level
+          if (bottomPipeHeight > 0) {
+            drawPipeWithAssets(ctx, pipeShaftImg.current, pipeCapImg.current, Math.round(p.x), p.gapY + PIPE_GAP, PIPE_WIDTH, bottomPipeHeight, false);
+          }
         }
       });
     } else {
@@ -733,20 +738,14 @@ export default function GameCanvas() {
       });
     }
 
-    // 5. FART EFFECT - Renders behind Pepe but above background/pipes
+    // 5. FART EFFECT - Optimized for Telegram performance
     if (fartVisible.current && imagesLoaded.current && fartImg.current) {
       // Calculate opacity based on current timer
       const opacity = getFartOpacity(fartTimer.current);
       
-      // Debug logging for fart opacity
-      console.log(`💨 Fart - Timer: ${fartTimer.current.toFixed(1)}, Opacity: ${opacity.toFixed(2)}`);
-      
       // Only render if opacity is greater than 0
-      if (opacity > 0) {
-        ctx.save();
-        ctx.imageSmoothingEnabled = false; // Pixel-perfect rendering for fart effect
-        
-        // Apply opacity/alpha
+      if (opacity > 0.05) { // Skip rendering for very low opacity to improve performance
+        // Apply opacity/alpha efficiently
         ctx.globalAlpha = opacity;
         
         // Calculate fart size (80% of Pepe's size, maintaining aspect ratio)
@@ -769,9 +768,9 @@ export default function GameCanvas() {
         const pepeLeft = PLUSHPEPE_X; // Pepe's left edge
         const pepeBottom = plushpepe.current.y + PLUSHPEPE_SIZE; // Pepe's bottom edge
         
-        // Position fart at bottom-left of Pepe's visible area
-        const fartX = pepeLeft + FART_OFFSET_X; // Behind and to the left
-        const fartY = pepeBottom + FART_OFFSET_Y - fartHeight; // Bottom-aligned with Pepe
+        // Position fart at bottom-left of Pepe's visible area with rounded coordinates
+        const fartX = Math.round(pepeLeft + FART_OFFSET_X); // Behind and to the left
+        const fartY = Math.round(pepeBottom + FART_OFFSET_Y - fartHeight); // Bottom-aligned with Pepe
         
         // Draw fart effect behind Pepe with opacity
         ctx.drawImage(
@@ -780,34 +779,34 @@ export default function GameCanvas() {
           fartX, fartY, fartWidth, fartHeight // destination (scaled and positioned)
         );
         
-        // Explicitly reset alpha before restore (though restore should handle this)
+        // Reset alpha for next operations
         ctx.globalAlpha = 1.0;
-        ctx.restore();
       }
     }
 
-    // 6. PEPE PLAYER - Renders on top of fart effect
-    // Debug: Check if we should be drawing the sprite
+    // 6. PEPE PLAYER - Optimized rendering for Telegram
     const shouldDrawSprite = imagesLoaded.current && plushpepeImg.current;
     
     if (shouldDrawSprite) {
-      ctx.save();
-      // Enable image smoothing for better quality
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.translate(PLUSHPEPE_X + PLUSHPEPE_SIZE/2, plushpepe.current.y + PLUSHPEPE_SIZE/2); // center
+      // Calculate rounded positions for better performance
+      const centerX = Math.round(PLUSHPEPE_X + PLUSHPEPE_SIZE/2);
+      const centerY = Math.round(plushpepe.current.y + PLUSHPEPE_SIZE/2);
+      
+      ctx.translate(centerX, centerY); // center
       ctx.rotate((plushpepe.current.rot * Math.PI) / 180);
-      // Draw the PlushPepe sprite (bigger size for better visibility)
+      // Draw the PlushPepe sprite with better performance
       ctx.drawImage(plushpepeImg.current, -PLUSHPEPE_SIZE/2, -PLUSHPEPE_SIZE/2, PLUSHPEPE_SIZE, PLUSHPEPE_SIZE);
-      ctx.restore();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform efficiently
     } else {
       // Fallback placeholder while loading
-      ctx.save();
-      ctx.translate(PLUSHPEPE_X + PLUSHPEPE_SIZE/2, plushpepe.current.y + PLUSHPEPE_SIZE/2); // center
+      const centerX = Math.round(PLUSHPEPE_X + PLUSHPEPE_SIZE/2);
+      const centerY = Math.round(plushpepe.current.y + PLUSHPEPE_SIZE/2);
+      
+      ctx.translate(centerX, centerY); // center
       ctx.rotate((plushpepe.current.rot * Math.PI) / 180);
       ctx.fillStyle = '#ffca28';
       ctx.fillRect(-PLUSHPEPE_SIZE/2, -PLUSHPEPE_SIZE/2, PLUSHPEPE_SIZE, PLUSHPEPE_SIZE); // bigger fallback
-      ctx.restore();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform efficiently
     }
 
     // Debug: Show pipe gaps (uncomment to visualize)
@@ -851,6 +850,9 @@ export default function GameCanvas() {
       ctx.fillText(`Best: ${currentBest}`, V_WIDTH / 2, V_HEIGHT / 2 + 68); // scaled 2x
       ctx.fillText('Tap to Restart', V_WIDTH / 2, V_HEIGHT / 2 + 128); // scaled 2x
     }
+    
+    // Restore initial canvas state for Telegram optimization
+    ctx.restore();
   }
 
   /* ===== Reset ===== */
