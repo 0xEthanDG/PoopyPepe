@@ -107,16 +107,22 @@ function calculatePepeManeuverability() {
   return { climb: climbRange, fall: fallRange };
 }
 
-/* ====== Helper: Enhanced pipe gap generation with full screen randomization ====== */
+/* ====== Helper: Enhanced pipe gap generation with proper height constraints ====== */
 function randomGapY(previousGapY = null) {
-  // Calculate screen height zones (20% to 75% of screen height from top)
+  // Calculate safe pipe gap positioning to ensure full pipe rendering
   const SCREEN_HEIGHT = 1024; // V_HEIGHT
+  const FIXED_GROUND_HEIGHT = 224;
+  const ACTUAL_GROUND_Y = SCREEN_HEIGHT - FIXED_GROUND_HEIGHT; // 800px
   
-  // Define the randomization range: 20% to 75% of screen height from top
-  const minScreenPercent = 0.20; // 20% from top
-  const maxScreenPercent = 0.75; // 75% from top
-  const minGapTop = Math.floor(SCREEN_HEIGHT * minScreenPercent); // ~205px from top
-  const maxGapTop = Math.floor(SCREEN_HEIGHT * maxScreenPercent); // ~768px from top
+  // Define minimum pipe shaft height for visual balance (at least one full shaft segment + cap)
+  const MIN_PIPE_SHAFT_HEIGHT = 80; // Ensures at least one visible shaft tile + cap
+  const SAFE_MARGIN = 50; // Additional margin for gameplay fairness
+  
+  // Calculate safe Y-range for gap center to ensure both pipes render fully
+  const minGapY = MIN_PIPE_SHAFT_HEIGHT + SAFE_MARGIN; // ~130px from top
+  const maxGapY = ACTUAL_GROUND_Y - PIPE_GAP - MIN_PIPE_SHAFT_HEIGHT - SAFE_MARGIN; // ~550px from top
+  
+  console.log(`🔧 Safe gap range: ${minGapY}px to ${maxGapY}px (ensures ${MIN_PIPE_SHAFT_HEIGHT}px+ shaft on both pipes)`);
   
   // Get Pepe's 3-flap maneuverability constraints
   const maneuverability = calculatePepeManeuverability();
@@ -127,8 +133,8 @@ function randomGapY(previousGapY = null) {
   
   if (previousGapY !== null) {
     // Calculate reachable range from previous gap with maneuverability constraints
-    const minReachableY = Math.max(minGapTop, previousGapY - MAX_UPWARD_DELTA);
-    const maxReachableY = Math.min(maxGapTop, previousGapY + MAX_DOWNWARD_DELTA);
+    const minReachableY = Math.max(minGapY, previousGapY - MAX_UPWARD_DELTA);
+    const maxReachableY = Math.min(maxGapY, previousGapY + MAX_DOWNWARD_DELTA);
     
     // Enhanced variation system with MINIMUM 40px delta requirement
     // 10% small (±30px), 30% medium (±60px), 60% large (full reachable range)
@@ -188,24 +194,27 @@ function randomGapY(previousGapY = null) {
     const deltaAmount = Math.abs(targetGapY - previousGapY);
     const variationTypeStr = variationType < 0.1 ? 'SMALL' : variationType < 0.4 ? 'MEDIUM' : 'LARGE';
     const screenPercent = ((targetGapY / SCREEN_HEIGHT) * 100).toFixed(1);
-    console.log(`🎯 Enhanced gap: prev=${previousGapY}, new=${targetGapY} (${screenPercent}% screen), ${deltaDirection} ${deltaAmount}px (${variationTypeStr})`);
+    console.log(`🎯 Safe gap: prev=${previousGapY}, new=${targetGapY} (${screenPercent}% screen), ${deltaDirection} ${deltaAmount}px (${variationTypeStr})`);
   } else {
-    // First gap - use safer middle range (30% to 60% of screen height) to prevent low spawns
-    const safeMinPercent = 0.30; // 30% from top - safer than 20%
-    const safeMaxPercent = 0.60; // 60% from top - safer than 75%
-    const safeMinGapTop = Math.floor(SCREEN_HEIGHT * safeMinPercent); // ~307px from top
-    const safeMaxGapTop = Math.floor(SCREEN_HEIGHT * safeMaxPercent); // ~614px from top
+    // First gap - use safe middle range to ensure full pipe rendering
+    const safeRangeSize = maxGapY - minGapY;
+    const middleStart = minGapY + safeRangeSize * 0.25; // 25% into safe range
+    const middleEnd = minGapY + safeRangeSize * 0.75;   // 75% into safe range
     
     // Generate first gap in safe middle range
-    targetGapY = Math.floor(safeMinGapTop + Math.random() * (safeMaxGapTop - safeMinGapTop));
+    targetGapY = Math.floor(middleStart + Math.random() * (middleEnd - middleStart));
     
     const screenPercent = ((targetGapY / SCREEN_HEIGHT) * 100).toFixed(1);
-    console.log(`🎯 Safe initial gap at Y=${targetGapY} (${screenPercent}% screen height, safe range=${safeMinGapTop}-${safeMaxGapTop})`);
+    console.log(`🎯 Safe initial gap at Y=${targetGapY} (${screenPercent}% screen height, range=${Math.floor(middleStart)}-${Math.floor(middleEnd)})`);
   }
   
-  // Add subtle randomization for natural feel
-  const microVariation = (Math.random() - 0.5) * 16; // ±8px micro-variation
-  const finalGapY = Math.round(Math.max(minGapTop, Math.min(maxGapTop, targetGapY + microVariation)));
+  // Clamp to absolute safe bounds (no micro-variation that could break bounds)
+  const finalGapY = Math.max(minGapY, Math.min(maxGapY, targetGapY));
+  
+  // Verify the bottom pipe will render properly
+  const bottomPipeHeight = ACTUAL_GROUND_Y - (finalGapY + PIPE_GAP);
+  const topPipeHeight = finalGapY;
+  console.log(`🔍 Pipe heights: top=${topPipeHeight}px, bottom=${bottomPipeHeight}px (both > ${MIN_PIPE_SHAFT_HEIGHT}px required)`);
   
   return finalGapY;
 }
