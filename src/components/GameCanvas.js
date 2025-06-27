@@ -18,9 +18,13 @@ const V_HEIGHT = 1024;  // 2x resolution for better sprite quality
 // Global score variable for debugging
 let globalScore = 0;
 
-const GRAVITY = 0.35;   // px / frame^2 at 60 fps (increased for faster falling)
-const JUMP_VELOCITY = -5.8; // upward impulse (px / frame, increased for stronger flaps)
-const MAX_FALL_SPEED = 9;   // terminal velocity downward (increased for faster descent)
+// Physics Constants - Realistic Earth-like gravity simulation
+// Scale: ~100px = 1 meter, 60fps = real-time
+// Earth gravity: 9.8 m/s² = 9.8 * 100px/m ÷ (60fps)² = 0.272 px/frame²
+// Increased slightly for better game feel while staying realistic
+const GRAVITY = 0.4;   // px/frame² at 60 fps (realistic Earth-like gravity + game feel)
+const JUMP_VELOCITY = -6.5; // upward impulse (px/frame, increased to match stronger gravity)
+const MAX_FALL_SPEED = 12;   // terminal velocity downward (realistic for a small bird)
 
 // Synchronized scroll system - single speed for perfect alignment
 const SCROLL_SPEED = 4.025; // horizontal px / frame (scaled 2x) - increased by 15% for smoother gameplay
