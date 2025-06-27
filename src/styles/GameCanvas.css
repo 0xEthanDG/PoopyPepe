@@ -3,14 +3,50 @@ canvas {
   display: block;
   margin: 0 auto;
   image-rendering: pixelated; /* crisp retro pixels */
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  touch-action: manipulation; /* Optimize for touch */
 }
 
-/* Optional center container */
+/* Mobile-first responsive design */
 html, body, #root {
   margin: 0;
+  padding: 0;
   height: 100%;
+  width: 100%;
   background: #222; /* letterbox */
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
+  position: fixed; /* Prevent scrolling on mobile */
+  -webkit-overflow-scrolling: none;
+}
+
+/* Telegram Mini App specific optimizations */
+@media screen and (max-width: 480px) {
+  canvas {
+    /* Ensure canvas fits in mobile viewport */
+    max-width: 100vw;
+    max-height: 100vh;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  canvas {
+    height: 95vh;
+    width: auto;
+  }
+}
+
+/* High DPI display support */
+@media screen and (-webkit-min-device-pixel-ratio: 2),
+       screen and (min-resolution: 192dpi) {
+  canvas {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: pixelated;
+  }
 } 
