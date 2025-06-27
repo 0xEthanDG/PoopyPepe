@@ -22,11 +22,11 @@ const GRAVITY = 0.35;   // px / frame^2 at 60 fps (increased for faster falling)
 const JUMP_VELOCITY = -5.8; // upward impulse (px / frame, increased for stronger flaps)
 const MAX_FALL_SPEED = 9;   // terminal velocity downward (increased for faster descent)
 
-const PIPE_SPEED = 3.5; // horizontal px / frame (scaled 2x) - increased by 60% for much faster gameplay
+const PIPE_SPEED = 4.025; // horizontal px / frame (scaled 2x) - increased by 15% for smoother gameplay
 const PIPE_INTERVAL = 350; // distance between pipes (reduced for more frequent obstacles)
-const PIPE_GAP = 130;   // vertical gap size (slightly reduced for additional challenge)
-const GROUND_SPEED = 3.5; // ground scroll speed (synchronized with pipes for consistent speed)
-const CLOUD_SPEED = 1.6; // cloud scroll speed (60% of foreground speed for better parallax)
+const PIPE_GAP = 162.5;   // vertical gap size (increased by 25% for better balance)
+const GROUND_SPEED = 4.025; // ground scroll speed (synchronized with pipes for consistent speed)
+const CLOUD_SPEED = 1.84; // cloud scroll speed (increased proportionally with scroll speed)
 
 const PLUSHPEPE_X = 160;     // fixed horizontal plushpepe position (scaled 2x)
 const PLUSHPEPE_SIZE = 96;   // PlushPepe sprite size (scaled 2x for high resolution)
@@ -832,7 +832,12 @@ export default function GameCanvas() {
     // Display current score
     ctx.fillText(globalScore, V_WIDTH / 2, 100); // scaled 2x
 
-    // Build version indicator removed for production
+    // Temporary debug text for smooth patch verification
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '24px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('v2.1 smooth patch', 10, V_HEIGHT - 10); // Bottom-left build indicator
+    ctx.textAlign = 'center'; // Reset text align
 
     // Ready / GameOver overlays
     if (gameStateRef.current === 'ready') {
