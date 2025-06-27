@@ -68,139 +68,123 @@ function getFartOpacity(timeRemaining) {
   }
 }
 
-/* ====== Helper: Calculate Pepe's traversal capabilities ====== */
-function calculateTraversalLimits() {
-  // Physics-based calculation of Pepe's movement capabilities between pipes
-  const timeBetweenPipes = PIPE_INTERVAL / PIPE_SPEED; // frames to traverse between pipes
-  const comfortableTapInterval = 15; // frames between comfortable taps (0.25 seconds at 60fps)
-  const maxComfortableTaps = Math.floor(timeBetweenPipes / comfortableTapInterval);
+// Removed unused helper functions to clean up build warnings
+
+/* ====== Helper: Calculate Pepe's 3-flap maneuverability in 1.5 seconds ====== */
+function calculatePepeManeuverability() {
+  const oneAndHalfSecondFrames = 90; // 1.5 seconds at 60fps
+  const optimalFlapInterval = 18; // frames between flaps (0.3 seconds)
+  const maxFlaps = 3; // exactly 3 flaps as specified
   
-  // Simulate comfortable tapping pattern (not frame-perfect)
-  let maxUpwardPosition = 0;
-  let maxDownwardPosition = 0;
+  // Simulate 3 flaps over 1.5 seconds
+  let maxUpwardTravel = 0;
+  let maxDownwardTravel = 0;
   let position = 0;
   let velocity = 0;
+  let flapsUsed = 0;
   
-  // Test upward movement potential
-  for (let frame = 0; frame < timeBetweenPipes; frame++) {
-    if (frame % comfortableTapInterval === 0 && frame / comfortableTapInterval < maxComfortableTaps) {
+  for (let frame = 0; frame < oneAndHalfSecondFrames; frame++) {
+    // Apply flap at optimal intervals, max 3 flaps
+    if (frame % optimalFlapInterval === 0 && flapsUsed < maxFlaps) {
       velocity = JUMP_VELOCITY;
+      flapsUsed++;
     }
+    
+    // Apply physics
     velocity += GRAVITY;
     if (velocity > MAX_FALL_SPEED) velocity = MAX_FALL_SPEED;
     position += velocity;
     
-    if (position < maxUpwardPosition) maxUpwardPosition = position;
-    if (position > maxDownwardPosition) maxDownwardPosition = position;
+    // Track maximum travel in both directions
+    if (position < maxUpwardTravel) maxUpwardTravel = position;
+    if (position > maxDownwardTravel) maxDownwardTravel = position;
   }
   
-  const comfortableClimb = Math.abs(maxUpwardPosition) * 0.75; // 75% of max for comfort
-  const comfortableFall = Math.abs(maxDownwardPosition) * 0.8; // 80% of max for comfort
+  const climbRange = Math.abs(maxUpwardTravel) * 0.85; // 85% safety margin
+  const fallRange = Math.abs(maxDownwardTravel) * 0.9; // 90% safety margin
   
-  console.log(`🧮 Traversal limits: ${maxComfortableTaps} comfortable taps, climb=${comfortableClimb.toFixed(1)}px, fall=${comfortableFall.toFixed(1)}px`);
-  return { climb: comfortableClimb, fall: comfortableFall };
+  console.log(`🧮 Pepe maneuverability: 3 flaps in 1.5s = climb ${climbRange.toFixed(0)}px, fall ${fallRange.toFixed(0)}px`);
+  return { climb: climbRange, fall: fallRange };
 }
 
-/* ====== Helper: Generate weighted random number with bias toward center ====== */
-function weightedRandom(min, max, centerBias = 0.3) {
-  // Generate two random numbers and blend them to create center bias
-  const uniform = Math.random();
-  const centerBiased = Math.random();
-  
-  // Blend uniform and center-biased distributions
-  const blended = uniform * (1 - centerBias) + centerBiased * centerBias;
-  
-  return min + blended * (max - min);
-}
-
-/* ====== Helper: Advanced pipe gap generation with increased variability ====== */
+/* ====== Helper: Enhanced pipe gap generation with full screen randomization ====== */
 function randomGapY(previousGapY = null) {
-  const minGapTop = 120;   // min distance from top (scaled 2x)
-  const maxGapTop = 520;   // max distance from top - ensures reasonable bottom pipe height
+  // Calculate screen height zones (20% to 75% of screen height from top)
+  const SCREEN_HEIGHT = 1024; // V_HEIGHT
   
-  // Get comfortable traversal limits
-  const limits = calculateTraversalLimits();
+  // Define the randomization range: 20% to 75% of screen height from top
+  const minScreenPercent = 0.20; // 20% from top
+  const maxScreenPercent = 0.75; // 75% from top
+  const minGapTop = Math.floor(SCREEN_HEIGHT * minScreenPercent); // ~205px from top
+  const maxGapTop = Math.floor(SCREEN_HEIGHT * maxScreenPercent); // ~768px from top
   
-  // Calculate 1-second constraint for maximum vertical travel
-  const oneSecondFrames = 60; // 1 second at 60fps
-  const maxTapsPerSecond = Math.floor(oneSecondFrames / 15); // Comfortable tapping rate
-  
-  // Simulate 1-second max travel potential
-  let maxOneSecondClimb = 0;
-  let maxOneSecondFall = 0;
-  let position = 0;
-  let velocity = 0;
-  
-  for (let frame = 0; frame < oneSecondFrames; frame++) {
-    if (frame % 15 === 0 && frame / 15 < maxTapsPerSecond) {
-      velocity = JUMP_VELOCITY;
-    }
-    velocity += GRAVITY;
-    if (velocity > MAX_FALL_SPEED) velocity = MAX_FALL_SPEED;
-    position += velocity;
-    
-    if (position < maxOneSecondClimb) maxOneSecondClimb = position;
-    if (position > maxOneSecondFall) maxOneSecondFall = position;
-  }
-  
-  // Apply 1-second constraint with safety margin
-  const ONE_SECOND_CLIMB_LIMIT = Math.abs(maxOneSecondClimb) * 0.8; // 80% safety margin
-  const ONE_SECOND_FALL_LIMIT = Math.abs(maxOneSecondFall) * 0.85; // 85% safety margin
-  
-  // Use more aggressive limits for increased variability
-  const MAX_UPWARD_DELTA = Math.min(ONE_SECOND_CLIMB_LIMIT, limits.climb * 1.2); // 20% more aggressive
-  const MAX_DOWNWARD_DELTA = Math.min(ONE_SECOND_FALL_LIMIT, limits.fall * 1.3); // 30% more aggressive
+  // Get Pepe's 3-flap maneuverability constraints
+  const maneuverability = calculatePepeManeuverability();
+  const MAX_UPWARD_DELTA = Math.min(95, maneuverability.climb); // Cap at 95px for balance
+  const MAX_DOWNWARD_DELTA = Math.min(100, maneuverability.fall); // Cap at 100px for balance
   
   let targetGapY;
   
   if (previousGapY !== null) {
-    // Calculate the reachable range from previous gap
+    // Calculate reachable range from previous gap with maneuverability constraints
     const minReachableY = Math.max(minGapTop, previousGapY - MAX_UPWARD_DELTA);
     const maxReachableY = Math.min(maxGapTop, previousGapY + MAX_DOWNWARD_DELTA);
     
-    // Increased variability: favor larger changes for more challenge
-    // 15% chance for small changes (±25px), 35% for medium (±80px), 50% for large (max range)
-    const changeType = Math.random();
+    // Enhanced variation system with better distribution
+    // 10% small (±30px), 30% medium (±60px), 60% large (full reachable range)
+    const variationType = Math.random();
     let finalRange;
     
-    if (changeType < 0.15) {
-      // Small change - minimal variation (reduced probability)
-      const smallDelta = 25;
+    if (variationType < 0.1) {
+      // Small variation - subtle changes
+      const smallDelta = 30;
       finalRange = {
         min: Math.max(minReachableY, previousGapY - smallDelta),
         max: Math.min(maxReachableY, previousGapY + smallDelta)
       };
-    } else if (changeType < 0.5) {
-      // Medium change - moderate variation
-      const mediumDelta = 80;
+    } else if (variationType < 0.4) {
+      // Medium variation - moderate changes
+      const mediumDelta = 60;
       finalRange = {
         min: Math.max(minReachableY, previousGapY - mediumDelta),
         max: Math.min(maxReachableY, previousGapY + mediumDelta)
       };
     } else {
-      // Large change - use full reachable range for maximum variation (increased probability)
+      // Large variation - use full reachable range for maximum diversity
       finalRange = {
         min: minReachableY,
         max: maxReachableY
       };
     }
     
-    // Generate position using weighted random with less center bias for more spread
-    targetGapY = Math.floor(weightedRandom(finalRange.min, finalRange.max, 0.1));
+    // Generate position with uniform distribution across the range
+    const rangeSize = finalRange.max - finalRange.min;
+    targetGapY = Math.floor(finalRange.min + Math.random() * rangeSize);
     
     const deltaDirection = targetGapY > previousGapY ? 'DOWN' : 'UP';
     const deltaAmount = Math.abs(targetGapY - previousGapY);
-    const changeTypeStr = changeType < 0.15 ? 'SMALL' : changeType < 0.5 ? 'MEDIUM' : 'LARGE';
-    console.log(`🎯 Variable gap: prev=${previousGapY}, new=${targetGapY}, ${deltaDirection} ${deltaAmount}px (${changeTypeStr} change, 1s-limit=${ONE_SECOND_CLIMB_LIMIT.toFixed(0)}/${ONE_SECOND_FALL_LIMIT.toFixed(0)})`);
+    const variationTypeStr = variationType < 0.1 ? 'SMALL' : variationType < 0.4 ? 'MEDIUM' : 'LARGE';
+    const screenPercent = ((targetGapY / SCREEN_HEIGHT) * 100).toFixed(1);
+    console.log(`🎯 Enhanced gap: prev=${previousGapY}, new=${targetGapY} (${screenPercent}% screen), ${deltaDirection} ${deltaAmount}px (${variationTypeStr})`);
   } else {
-    // First gap - use weighted random across full range with less center bias
-    targetGapY = Math.floor(weightedRandom(minGapTop, maxGapTop, 0.2));
-    console.log(`🎯 Initial gap at Y=${targetGapY} (high variability)`);
+    // First gap - use full screen range with slight bias toward middle zones
+    const middleZoneStart = minGapTop + (maxGapTop - minGapTop) * 0.2;
+    const middleZoneEnd = minGapTop + (maxGapTop - minGapTop) * 0.8;
+    
+    // 70% chance for middle zones, 30% for extreme positions
+    if (Math.random() < 0.7) {
+      targetGapY = Math.floor(middleZoneStart + Math.random() * (middleZoneEnd - middleZoneStart));
+    } else {
+      targetGapY = Math.floor(minGapTop + Math.random() * (maxGapTop - minGapTop));
+    }
+    
+    const screenPercent = ((targetGapY / SCREEN_HEIGHT) * 100).toFixed(1);
+    console.log(`🎯 Initial gap at Y=${targetGapY} (${screenPercent}% screen height, range=${minGapTop}-${maxGapTop})`);
   }
   
-  // Add increased jitter for more micro-variation
-  const jitter = (Math.random() - 0.5) * 24; // ±12px increased jitter
-  const finalGapY = Math.round(Math.max(minGapTop, Math.min(maxGapTop, targetGapY + jitter)));
+  // Add subtle randomization for natural feel
+  const microVariation = (Math.random() - 0.5) * 16; // ±8px micro-variation
+  const finalGapY = Math.round(Math.max(minGapTop, Math.min(maxGapTop, targetGapY + microVariation)));
   
   return finalGapY;
 }
