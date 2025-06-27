@@ -113,15 +113,43 @@ function weightedRandom(min, max, centerBias = 0.3) {
   return min + blended * (max - min);
 }
 
-/* ====== Helper: Advanced pipe gap generation with natural variance ====== */
+/* ====== Helper: Advanced pipe gap generation with increased variability ====== */
 function randomGapY(previousGapY = null) {
   const minGapTop = 120;   // min distance from top (scaled 2x)
   const maxGapTop = 520;   // max distance from top - ensures reasonable bottom pipe height
   
   // Get comfortable traversal limits
   const limits = calculateTraversalLimits();
-  const MAX_UPWARD_DELTA = Math.min(95, limits.climb); // Comfortable climb limit
-  const MAX_DOWNWARD_DELTA = Math.min(140, limits.fall); // Comfortable fall limit
+  
+  // Calculate 1-second constraint for maximum vertical travel
+  const oneSecondFrames = 60; // 1 second at 60fps
+  const maxTapsPerSecond = Math.floor(oneSecondFrames / 15); // Comfortable tapping rate
+  
+  // Simulate 1-second max travel potential
+  let maxOneSecondClimb = 0;
+  let maxOneSecondFall = 0;
+  let position = 0;
+  let velocity = 0;
+  
+  for (let frame = 0; frame < oneSecondFrames; frame++) {
+    if (frame % 15 === 0 && frame / 15 < maxTapsPerSecond) {
+      velocity = JUMP_VELOCITY;
+    }
+    velocity += GRAVITY;
+    if (velocity > MAX_FALL_SPEED) velocity = MAX_FALL_SPEED;
+    position += velocity;
+    
+    if (position < maxOneSecondClimb) maxOneSecondClimb = position;
+    if (position > maxOneSecondFall) maxOneSecondFall = position;
+  }
+  
+  // Apply 1-second constraint with safety margin
+  const ONE_SECOND_CLIMB_LIMIT = Math.abs(maxOneSecondClimb) * 0.8; // 80% safety margin
+  const ONE_SECOND_FALL_LIMIT = Math.abs(maxOneSecondFall) * 0.85; // 85% safety margin
+  
+  // Use more aggressive limits for increased variability
+  const MAX_UPWARD_DELTA = Math.min(ONE_SECOND_CLIMB_LIMIT, limits.climb * 1.2); // 20% more aggressive
+  const MAX_DOWNWARD_DELTA = Math.min(ONE_SECOND_FALL_LIMIT, limits.fall * 1.3); // 30% more aggressive
   
   let targetGapY;
   
@@ -130,48 +158,48 @@ function randomGapY(previousGapY = null) {
     const minReachableY = Math.max(minGapTop, previousGapY - MAX_UPWARD_DELTA);
     const maxReachableY = Math.min(maxGapTop, previousGapY + MAX_DOWNWARD_DELTA);
     
-    // Use weighted randomization for more natural variance
-    // 40% chance for small changes (±30px), 40% for medium (±60px), 20% for large (max range)
+    // Increased variability: favor larger changes for more challenge
+    // 15% chance for small changes (±25px), 35% for medium (±80px), 50% for large (max range)
     const changeType = Math.random();
     let finalRange;
     
-    if (changeType < 0.4) {
-      // Small change - stay close to previous gap
-      const smallDelta = 30;
+    if (changeType < 0.15) {
+      // Small change - minimal variation (reduced probability)
+      const smallDelta = 25;
       finalRange = {
         min: Math.max(minReachableY, previousGapY - smallDelta),
         max: Math.min(maxReachableY, previousGapY + smallDelta)
       };
-    } else if (changeType < 0.8) {
+    } else if (changeType < 0.5) {
       // Medium change - moderate variation
-      const mediumDelta = 70;
+      const mediumDelta = 80;
       finalRange = {
         min: Math.max(minReachableY, previousGapY - mediumDelta),
         max: Math.min(maxReachableY, previousGapY + mediumDelta)
       };
     } else {
-      // Large change - use full reachable range for dramatic variation
+      // Large change - use full reachable range for maximum variation (increased probability)
       finalRange = {
         min: minReachableY,
         max: maxReachableY
       };
     }
     
-    // Generate position using weighted random for natural distribution
-    targetGapY = Math.floor(weightedRandom(finalRange.min, finalRange.max, 0.2));
+    // Generate position using weighted random with less center bias for more spread
+    targetGapY = Math.floor(weightedRandom(finalRange.min, finalRange.max, 0.1));
     
     const deltaDirection = targetGapY > previousGapY ? 'DOWN' : 'UP';
     const deltaAmount = Math.abs(targetGapY - previousGapY);
-    const changeTypeStr = changeType < 0.4 ? 'SMALL' : changeType < 0.8 ? 'MEDIUM' : 'LARGE';
-    console.log(`🎯 Natural gap: prev=${previousGapY}, new=${targetGapY}, ${deltaDirection} ${deltaAmount}px (${changeTypeStr} change)`);
+    const changeTypeStr = changeType < 0.15 ? 'SMALL' : changeType < 0.5 ? 'MEDIUM' : 'LARGE';
+    console.log(`🎯 Variable gap: prev=${previousGapY}, new=${targetGapY}, ${deltaDirection} ${deltaAmount}px (${changeTypeStr} change, 1s-limit=${ONE_SECOND_CLIMB_LIMIT.toFixed(0)}/${ONE_SECOND_FALL_LIMIT.toFixed(0)})`);
   } else {
-    // First gap - use weighted random across full range for natural starting position
-    targetGapY = Math.floor(weightedRandom(minGapTop, maxGapTop, 0.4));
-    console.log(`🎯 Initial gap at Y=${targetGapY} (weighted random)`);
+    // First gap - use weighted random across full range with less center bias
+    targetGapY = Math.floor(weightedRandom(minGapTop, maxGapTop, 0.2));
+    console.log(`🎯 Initial gap at Y=${targetGapY} (high variability)`);
   }
   
-  // Add subtle jitter for micro-variation while maintaining natural flow
-  const jitter = (Math.random() - 0.5) * 16; // ±8px smooth jitter
+  // Add increased jitter for more micro-variation
+  const jitter = (Math.random() - 0.5) * 24; // ±12px increased jitter
   const finalGapY = Math.round(Math.max(minGapTop, Math.min(maxGapTop, targetGapY + jitter)));
   
   return finalGapY;
@@ -935,7 +963,7 @@ export default function GameCanvas() {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.font = '24px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText('v2.1 smooth patch', 10, V_HEIGHT - 10); // Bottom-left build indicator
+    ctx.fillText('v2.2', 10, V_HEIGHT - 10); // Bottom-left build indicator
     ctx.textAlign = 'center'; // Reset text align
 
     // Ready / GameOver overlays
