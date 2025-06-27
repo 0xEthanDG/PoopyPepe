@@ -68,72 +68,111 @@ function getFartOpacity(timeRemaining) {
   }
 }
 
-/* ====== Helper: Calculate Pepe's maximum climb potential ====== */
-function calculateMaxClimbHeight() {
-  // Physics-based calculation of maximum height Pepe can gain between pipes
+/* ====== Helper: Calculate Pepe's traversal capabilities ====== */
+function calculateTraversalLimits() {
+  // Physics-based calculation of Pepe's movement capabilities between pipes
   const timeBetweenPipes = PIPE_INTERVAL / PIPE_SPEED; // frames to traverse between pipes
-  const optimalTapInterval = 12; // frames between optimal taps (0.2 seconds at 60fps)
-  const maxTaps = Math.floor(timeBetweenPipes / optimalTapInterval);
+  const comfortableTapInterval = 15; // frames between comfortable taps (0.25 seconds at 60fps)
+  const maxComfortableTaps = Math.floor(timeBetweenPipes / comfortableTapInterval);
   
-  // Simulate optimal tapping pattern
+  // Simulate comfortable tapping pattern (not frame-perfect)
+  let maxUpwardPosition = 0;
+  let maxDownwardPosition = 0;
   let position = 0;
   let velocity = 0;
-  let maxHeight = 0;
   
+  // Test upward movement potential
   for (let frame = 0; frame < timeBetweenPipes; frame++) {
-    // Apply tap at optimal intervals
-    if (frame % optimalTapInterval === 0 && frame / optimalTapInterval < maxTaps) {
-      velocity = JUMP_VELOCITY; // Reset velocity to jump impulse
+    if (frame % comfortableTapInterval === 0 && frame / comfortableTapInterval < maxComfortableTaps) {
+      velocity = JUMP_VELOCITY;
     }
-    
-    // Apply physics
     velocity += GRAVITY;
     if (velocity > MAX_FALL_SPEED) velocity = MAX_FALL_SPEED;
     position += velocity;
     
-    // Track maximum upward displacement
-    if (position < maxHeight) {
-      maxHeight = position;
-    }
+    if (position < maxUpwardPosition) maxUpwardPosition = position;
+    if (position > maxDownwardPosition) maxDownwardPosition = position;
   }
   
-  const maxClimbHeight = Math.abs(maxHeight);
-  console.log(`🧮 Physics calculation: ${maxTaps} taps over ${timeBetweenPipes.toFixed(1)} frames = ${maxClimbHeight.toFixed(1)}px max climb`);
-  return maxClimbHeight;
+  const comfortableClimb = Math.abs(maxUpwardPosition) * 0.75; // 75% of max for comfort
+  const comfortableFall = Math.abs(maxDownwardPosition) * 0.8; // 80% of max for comfort
+  
+  console.log(`🧮 Traversal limits: ${maxComfortableTaps} comfortable taps, climb=${comfortableClimb.toFixed(1)}px, fall=${comfortableFall.toFixed(1)}px`);
+  return { climb: comfortableClimb, fall: comfortableFall };
 }
 
-/* ====== Helper: random Y for pipe gap with physics-based traversal constraints ====== */
+/* ====== Helper: Generate weighted random number with bias toward center ====== */
+function weightedRandom(min, max, centerBias = 0.3) {
+  // Generate two random numbers and blend them to create center bias
+  const uniform = Math.random();
+  const centerBiased = Math.random();
+  
+  // Blend uniform and center-biased distributions
+  const blended = uniform * (1 - centerBias) + centerBiased * centerBias;
+  
+  return min + blended * (max - min);
+}
+
+/* ====== Helper: Advanced pipe gap generation with natural variance ====== */
 function randomGapY(previousGapY = null) {
   const minGapTop = 120;   // min distance from top (scaled 2x)
   const maxGapTop = 520;   // max distance from top - ensures reasonable bottom pipe height
   
-  // Physics-based constraint: maximum height Pepe can realistically climb
-  const MAX_CLIMB_HEIGHT = calculateMaxClimbHeight();
-  const MAX_UPWARD_DELTA = Math.min(85, MAX_CLIMB_HEIGHT * 0.85); // 85% of theoretical max for safety margin
-  const MAX_DOWNWARD_DELTA = 120; // Falling is easier than climbing
+  // Get comfortable traversal limits
+  const limits = calculateTraversalLimits();
+  const MAX_UPWARD_DELTA = Math.min(95, limits.climb); // Comfortable climb limit
+  const MAX_DOWNWARD_DELTA = Math.min(140, limits.fall); // Comfortable fall limit
   
   let targetGapY;
   
   if (previousGapY !== null) {
-    // Asymmetric constraints: climbing up is harder than falling down
-    const minConstrainedY = Math.max(minGapTop, previousGapY - MAX_UPWARD_DELTA);
-    const maxConstrainedY = Math.min(maxGapTop, previousGapY + MAX_DOWNWARD_DELTA);
+    // Calculate the reachable range from previous gap
+    const minReachableY = Math.max(minGapTop, previousGapY - MAX_UPWARD_DELTA);
+    const maxReachableY = Math.min(maxGapTop, previousGapY + MAX_DOWNWARD_DELTA);
     
-    // Generate random position within physics-constrained range
-    targetGapY = Math.floor(Math.random() * (maxConstrainedY - minConstrainedY + 1)) + minConstrainedY;
+    // Use weighted randomization for more natural variance
+    // 40% chance for small changes (±30px), 40% for medium (±60px), 20% for large (max range)
+    const changeType = Math.random();
+    let finalRange;
+    
+    if (changeType < 0.4) {
+      // Small change - stay close to previous gap
+      const smallDelta = 30;
+      finalRange = {
+        min: Math.max(minReachableY, previousGapY - smallDelta),
+        max: Math.min(maxReachableY, previousGapY + smallDelta)
+      };
+    } else if (changeType < 0.8) {
+      // Medium change - moderate variation
+      const mediumDelta = 70;
+      finalRange = {
+        min: Math.max(minReachableY, previousGapY - mediumDelta),
+        max: Math.min(maxReachableY, previousGapY + mediumDelta)
+      };
+    } else {
+      // Large change - use full reachable range for dramatic variation
+      finalRange = {
+        min: minReachableY,
+        max: maxReachableY
+      };
+    }
+    
+    // Generate position using weighted random for natural distribution
+    targetGapY = Math.floor(weightedRandom(finalRange.min, finalRange.max, 0.2));
     
     const deltaDirection = targetGapY > previousGapY ? 'DOWN' : 'UP';
     const deltaAmount = Math.abs(targetGapY - previousGapY);
-    console.log(`🔧 Physics-constrained gap: prev=${previousGapY}, new=${targetGapY}, ${deltaDirection} ${deltaAmount}px (climb≤${MAX_UPWARD_DELTA}, fall≤${MAX_DOWNWARD_DELTA})`);
+    const changeTypeStr = changeType < 0.4 ? 'SMALL' : changeType < 0.8 ? 'MEDIUM' : 'LARGE';
+    console.log(`🎯 Natural gap: prev=${previousGapY}, new=${targetGapY}, ${deltaDirection} ${deltaAmount}px (${changeTypeStr} change)`);
   } else {
-    // First gap or no constraint - use full range
-    targetGapY = Math.floor(Math.random() * (maxGapTop - minGapTop + 1)) + minGapTop;
-    console.log(`🔧 Initial gap at Y=${targetGapY} (unconstrained)`);
+    // First gap - use weighted random across full range for natural starting position
+    targetGapY = Math.floor(weightedRandom(minGapTop, maxGapTop, 0.4));
+    console.log(`🎯 Initial gap at Y=${targetGapY} (weighted random)`);
   }
   
-  // Add minimal vertical jitter (±5px) for unpredictability while maintaining strict playability
-  const jitter = Math.floor(Math.random() * 11) - 5; // -5 to +5 pixels
-  const finalGapY = Math.max(minGapTop, Math.min(maxGapTop, targetGapY + jitter));
+  // Add subtle jitter for micro-variation while maintaining natural flow
+  const jitter = (Math.random() - 0.5) * 16; // ±8px smooth jitter
+  const finalGapY = Math.round(Math.max(minGapTop, Math.min(maxGapTop, targetGapY + jitter)));
   
   return finalGapY;
 }
