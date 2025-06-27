@@ -1,0 +1,22 @@
+{
+  "files": {
+    "main.css": "/PoopyPepe/static/css/main.782bcd2f.css",
+    "main.js": "/PoopyPepe/static/js/main.0a501b25.js",
+    "static/js/453.db14dcfe.chunk.js": "/PoopyPepe/static/js/453.db14dcfe.chunk.js",
+    "static/media/ground.png": "/PoopyPepe/static/media/ground.ee642f57b6931e15f56b.png",
+    "static/media/grass.png": "/PoopyPepe/static/media/grass.912fa09286b762dd5d1a.png",
+    "static/media/plushpepe.png": "/PoopyPepe/static/media/plushpepe.1e3746c09bec31fb488d.png",
+    "static/media/cloud.png": "/PoopyPepe/static/media/cloud.b9ae267ed397de6d2023.png",
+    "static/media/fart.png": "/PoopyPepe/static/media/fart.a0e39274fa91279ac259.png",
+    "static/media/pipeshaft.png": "/PoopyPepe/static/media/pipeshaft.681569019e1cdd6d87d7.png",
+    "static/media/pipecap.png": "/PoopyPepe/static/media/pipecap.ca41242795dbe3422440.png",
+    "index.html": "/PoopyPepe/index.html",
+    "main.782bcd2f.css.map": "/PoopyPepe/static/css/main.782bcd2f.css.map",
+    "main.0a501b25.js.map": "/PoopyPepe/static/js/main.0a501b25.js.map",
+    "453.db14dcfe.chunk.js.map": "/PoopyPepe/static/js/453.db14dcfe.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.782bcd2f.css",
+    "static/js/main.0a501b25.js"
+  ]
+}
