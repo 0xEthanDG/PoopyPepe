@@ -18,15 +18,15 @@ const V_HEIGHT = 1024;  // 2x resolution for better sprite quality
 // Global score variable for debugging
 let globalScore = 0;
 
-const GRAVITY = 0.2;    // px / frame^2 at 60 fps (easier)
-const JUMP_VELOCITY = -4.1; // upward impulse (px / frame, reduced by ~9% for heavier feel)
-const MAX_FALL_SPEED = 6;   // terminal velocity downward (slower)
+const GRAVITY = 0.35;   // px / frame^2 at 60 fps (increased for faster falling)
+const JUMP_VELOCITY = -5.8; // upward impulse (px / frame, increased for stronger flaps)
+const MAX_FALL_SPEED = 9;   // terminal velocity downward (increased for faster descent)
 
-const PIPE_SPEED = 2.2; // horizontal px / frame (scaled 2x) - increased by 10% for difficulty
-const PIPE_INTERVAL = 400; // distance between pipes (scaled 2x)
-const PIPE_GAP = 144;   // vertical gap size (reduced by 25% from 192 for increased difficulty)
-const GROUND_SPEED = 2.2; // ground scroll speed (synchronized with pipes - no parallax)
-const CLOUD_SPEED = 1.0; // cloud scroll speed (50% of foreground speed for parallax effect)
+const PIPE_SPEED = 3.5; // horizontal px / frame (scaled 2x) - increased by 60% for much faster gameplay
+const PIPE_INTERVAL = 350; // distance between pipes (reduced for more frequent obstacles)
+const PIPE_GAP = 130;   // vertical gap size (slightly reduced for additional challenge)
+const GROUND_SPEED = 3.5; // ground scroll speed (synchronized with pipes for consistent speed)
+const CLOUD_SPEED = 1.6; // cloud scroll speed (60% of foreground speed for better parallax)
 
 const PLUSHPEPE_X = 160;     // fixed horizontal plushpepe position (scaled 2x)
 const PLUSHPEPE_SIZE = 96;   // PlushPepe sprite size (scaled 2x for high resolution)
