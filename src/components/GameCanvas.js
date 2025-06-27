@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import '../styles/GameCanvas.css';
-// Import the PlushPepe sprite
+// Import the PlushPepe sprite (high-resolution version for optimal quality)
 import plushpepeSprite from '../assets/plushpepe.png';
 // Import the new Pipe assets
 import pipeShaftSprite from '../assets/pipeshaft.png';
@@ -925,29 +925,44 @@ export default function GameCanvas() {
       }
     }
 
-    // 6. PEPE PLAYER - Optimized rendering for Telegram
+    // 6. PEPE PLAYER - High-resolution optimized rendering
     const shouldDrawSprite = imagesLoaded.current && plushpepeImg.current;
     
     if (shouldDrawSprite) {
-      // Calculate rounded positions for better performance
+      // Calculate rounded positions for pixel-perfect rendering
       const centerX = Math.round(PLUSHPEPE_X + PLUSHPEPE_SIZE/2);
       const centerY = Math.round(plushpepe.current.y + PLUSHPEPE_SIZE/2);
       
+      ctx.save();
       ctx.translate(centerX, centerY); // center
       ctx.rotate((plushpepe.current.rot * Math.PI) / 180);
-      // Draw the PlushPepe sprite with better performance
-      ctx.drawImage(plushpepeImg.current, -PLUSHPEPE_SIZE/2, -PLUSHPEPE_SIZE/2, PLUSHPEPE_SIZE, PLUSHPEPE_SIZE);
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform efficiently
+      
+      // Enhanced rendering for high-resolution sprites
+      // Temporarily enable smoothing for HD sprite scaling, then disable for pixel-perfect edges
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high'; // Use highest quality scaling for HD sprites
+      
+      // Draw the high-resolution PlushPepe sprite with optimized scaling
+      ctx.drawImage(
+        plushpepeImg.current, 
+        0, 0, plushpepeImg.current.width, plushpepeImg.current.height, // source (full HD sprite)
+        -PLUSHPEPE_SIZE/2, -PLUSHPEPE_SIZE/2, PLUSHPEPE_SIZE, PLUSHPEPE_SIZE // destination (scaled to game size)
+      );
+      
+      // Restore pixel-perfect rendering for other elements
+      ctx.imageSmoothingEnabled = false;
+      ctx.restore();
     } else {
       // Fallback placeholder while loading
       const centerX = Math.round(PLUSHPEPE_X + PLUSHPEPE_SIZE/2);
       const centerY = Math.round(plushpepe.current.y + PLUSHPEPE_SIZE/2);
       
+      ctx.save();
       ctx.translate(centerX, centerY); // center
       ctx.rotate((plushpepe.current.rot * Math.PI) / 180);
       ctx.fillStyle = '#ffca28';
-      ctx.fillRect(-PLUSHPEPE_SIZE/2, -PLUSHPEPE_SIZE/2, PLUSHPEPE_SIZE, PLUSHPEPE_SIZE); // bigger fallback
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform efficiently
+      ctx.fillRect(-PLUSHPEPE_SIZE/2, -PLUSHPEPE_SIZE/2, PLUSHPEPE_SIZE, PLUSHPEPE_SIZE); // fallback
+      ctx.restore();
     }
 
     // Debug: Show pipe gaps (uncomment to visualize)

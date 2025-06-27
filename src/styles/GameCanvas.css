@@ -42,11 +42,19 @@ html, body, #root {
   }
 }
 
-/* High DPI display support */
+/* High DPI display support for crisp sprites */
 @media screen and (-webkit-min-device-pixel-ratio: 2),
        screen and (min-resolution: 192dpi) {
   canvas {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: pixelated;
+    image-rendering: crisp-edges; /* Sharp edges for HD sprites */
   }
+}
+
+/* Enhanced sprite rendering for high-resolution displays */
+canvas {
+  /* Ensure smooth scaling for high-resolution sprites while maintaining pixel art style */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 } 
