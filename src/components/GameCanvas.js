@@ -68,31 +68,71 @@ function getFartOpacity(timeRemaining) {
   }
 }
 
-/* ====== Helper: random Y for pipe gap with vertical jitter and traversal constraints ====== */
+/* ====== Helper: Calculate Pepe's maximum climb potential ====== */
+function calculateMaxClimbHeight() {
+  // Physics-based calculation of maximum height Pepe can gain between pipes
+  const timeBetweenPipes = PIPE_INTERVAL / PIPE_SPEED; // frames to traverse between pipes
+  const optimalTapInterval = 12; // frames between optimal taps (0.2 seconds at 60fps)
+  const maxTaps = Math.floor(timeBetweenPipes / optimalTapInterval);
+  
+  // Simulate optimal tapping pattern
+  let position = 0;
+  let velocity = 0;
+  let maxHeight = 0;
+  
+  for (let frame = 0; frame < timeBetweenPipes; frame++) {
+    // Apply tap at optimal intervals
+    if (frame % optimalTapInterval === 0 && frame / optimalTapInterval < maxTaps) {
+      velocity = JUMP_VELOCITY; // Reset velocity to jump impulse
+    }
+    
+    // Apply physics
+    velocity += GRAVITY;
+    if (velocity > MAX_FALL_SPEED) velocity = MAX_FALL_SPEED;
+    position += velocity;
+    
+    // Track maximum upward displacement
+    if (position < maxHeight) {
+      maxHeight = position;
+    }
+  }
+  
+  const maxClimbHeight = Math.abs(maxHeight);
+  console.log(`🧮 Physics calculation: ${maxTaps} taps over ${timeBetweenPipes.toFixed(1)} frames = ${maxClimbHeight.toFixed(1)}px max climb`);
+  return maxClimbHeight;
+}
+
+/* ====== Helper: random Y for pipe gap with physics-based traversal constraints ====== */
 function randomGapY(previousGapY = null) {
   const minGapTop = 120;   // min distance from top (scaled 2x)
   const maxGapTop = 520;   // max distance from top - ensures reasonable bottom pipe height
-  const MAX_VERTICAL_DELTA = 135; // Maximum vertical distance between consecutive gaps (playable constraint)
+  
+  // Physics-based constraint: maximum height Pepe can realistically climb
+  const MAX_CLIMB_HEIGHT = calculateMaxClimbHeight();
+  const MAX_UPWARD_DELTA = Math.min(85, MAX_CLIMB_HEIGHT * 0.85); // 85% of theoretical max for safety margin
+  const MAX_DOWNWARD_DELTA = 120; // Falling is easier than climbing
   
   let targetGapY;
   
   if (previousGapY !== null) {
-    // Constrain next gap to be within reachable distance of previous gap
-    const minConstrainedY = Math.max(minGapTop, previousGapY - MAX_VERTICAL_DELTA);
-    const maxConstrainedY = Math.min(maxGapTop, previousGapY + MAX_VERTICAL_DELTA);
+    // Asymmetric constraints: climbing up is harder than falling down
+    const minConstrainedY = Math.max(minGapTop, previousGapY - MAX_UPWARD_DELTA);
+    const maxConstrainedY = Math.min(maxGapTop, previousGapY + MAX_DOWNWARD_DELTA);
     
-    // Generate random position within constrained range
+    // Generate random position within physics-constrained range
     targetGapY = Math.floor(Math.random() * (maxConstrainedY - minConstrainedY + 1)) + minConstrainedY;
     
-    console.log(`🔧 Constrained gap: prev=${previousGapY}, range=[${minConstrainedY}-${maxConstrainedY}], new=${targetGapY}, delta=${Math.abs(targetGapY - previousGapY)}`);
+    const deltaDirection = targetGapY > previousGapY ? 'DOWN' : 'UP';
+    const deltaAmount = Math.abs(targetGapY - previousGapY);
+    console.log(`🔧 Physics-constrained gap: prev=${previousGapY}, new=${targetGapY}, ${deltaDirection} ${deltaAmount}px (climb≤${MAX_UPWARD_DELTA}, fall≤${MAX_DOWNWARD_DELTA})`);
   } else {
     // First gap or no constraint - use full range
     targetGapY = Math.floor(Math.random() * (maxGapTop - minGapTop + 1)) + minGapTop;
     console.log(`🔧 Initial gap at Y=${targetGapY} (unconstrained)`);
   }
   
-  // Add small vertical jitter (±8px) for unpredictability while maintaining playability
-  const jitter = Math.floor(Math.random() * 17) - 8; // -8 to +8 pixels
+  // Add minimal vertical jitter (±5px) for unpredictability while maintaining strict playability
+  const jitter = Math.floor(Math.random() * 11) - 5; // -5 to +5 pixels
   const finalGapY = Math.max(minGapTop, Math.min(maxGapTop, targetGapY + jitter));
   
   return finalGapY;
