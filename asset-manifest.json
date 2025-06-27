@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/PoopyPepe/static/css/main.782bcd2f.css",
-    "main.js": "/PoopyPepe/static/js/main.fe165245.js",
+    "main.js": "/PoopyPepe/static/js/main.c60ea8ed.js",
     "static/js/453.db14dcfe.chunk.js": "/PoopyPepe/static/js/453.db14dcfe.chunk.js",
     "static/media/ground.png": "/PoopyPepe/static/media/ground.ee642f57b6931e15f56b.png",
     "static/media/grass.png": "/PoopyPepe/static/media/grass.912fa09286b762dd5d1a.png",
@@ -12,11 +12,11 @@
     "static/media/pipecap.png": "/PoopyPepe/static/media/pipecap.ca41242795dbe3422440.png",
     "index.html": "/PoopyPepe/index.html",
     "main.782bcd2f.css.map": "/PoopyPepe/static/css/main.782bcd2f.css.map",
-    "main.fe165245.js.map": "/PoopyPepe/static/js/main.fe165245.js.map",
+    "main.c60ea8ed.js.map": "/PoopyPepe/static/js/main.c60ea8ed.js.map",
     "453.db14dcfe.chunk.js.map": "/PoopyPepe/static/js/453.db14dcfe.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.782bcd2f.css",
-    "static/js/main.fe165245.js"
+    "static/js/main.c60ea8ed.js"
   ]
 }
