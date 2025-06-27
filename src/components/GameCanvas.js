@@ -130,7 +130,7 @@ function randomGapY(previousGapY = null) {
     const minReachableY = Math.max(minGapTop, previousGapY - MAX_UPWARD_DELTA);
     const maxReachableY = Math.min(maxGapTop, previousGapY + MAX_DOWNWARD_DELTA);
     
-    // Enhanced variation system with better distribution
+    // Enhanced variation system with MINIMUM 40px delta requirement
     // 10% small (±30px), 30% medium (±60px), 60% large (full reachable range)
     const variationType = Math.random();
     let finalRange;
@@ -157,9 +157,32 @@ function randomGapY(previousGapY = null) {
       };
     }
     
-    // Generate position with uniform distribution across the range
-    const rangeSize = finalRange.max - finalRange.min;
-    targetGapY = Math.floor(finalRange.min + Math.random() * rangeSize);
+    // Generate position with minimum 40px delta requirement
+    let attempts = 0;
+    const maxAttempts = 20;
+    
+    do {
+      const rangeSize = finalRange.max - finalRange.min;
+      targetGapY = Math.floor(finalRange.min + Math.random() * rangeSize);
+      attempts++;
+    } while (Math.abs(targetGapY - previousGapY) < 40 && attempts < maxAttempts);
+    
+    // If we couldn't meet the 40px requirement, force it
+    if (Math.abs(targetGapY - previousGapY) < 40) {
+      // Try to move 40px up or down from previous position
+      const moveUp = previousGapY - 40;
+      const moveDown = previousGapY + 40;
+      
+      if (moveUp >= minReachableY) {
+        targetGapY = moveUp;
+      } else if (moveDown <= maxReachableY) {
+        targetGapY = moveDown;
+      } else {
+        // Use the furthest possible position
+        targetGapY = Math.abs(minReachableY - previousGapY) > Math.abs(maxReachableY - previousGapY) 
+          ? minReachableY : maxReachableY;
+      }
+    }
     
     const deltaDirection = targetGapY > previousGapY ? 'DOWN' : 'UP';
     const deltaAmount = Math.abs(targetGapY - previousGapY);
@@ -167,19 +190,17 @@ function randomGapY(previousGapY = null) {
     const screenPercent = ((targetGapY / SCREEN_HEIGHT) * 100).toFixed(1);
     console.log(`🎯 Enhanced gap: prev=${previousGapY}, new=${targetGapY} (${screenPercent}% screen), ${deltaDirection} ${deltaAmount}px (${variationTypeStr})`);
   } else {
-    // First gap - use full screen range with slight bias toward middle zones
-    const middleZoneStart = minGapTop + (maxGapTop - minGapTop) * 0.2;
-    const middleZoneEnd = minGapTop + (maxGapTop - minGapTop) * 0.8;
+    // First gap - use safer middle range (30% to 60% of screen height) to prevent low spawns
+    const safeMinPercent = 0.30; // 30% from top - safer than 20%
+    const safeMaxPercent = 0.60; // 60% from top - safer than 75%
+    const safeMinGapTop = Math.floor(SCREEN_HEIGHT * safeMinPercent); // ~307px from top
+    const safeMaxGapTop = Math.floor(SCREEN_HEIGHT * safeMaxPercent); // ~614px from top
     
-    // 70% chance for middle zones, 30% for extreme positions
-    if (Math.random() < 0.7) {
-      targetGapY = Math.floor(middleZoneStart + Math.random() * (middleZoneEnd - middleZoneStart));
-    } else {
-      targetGapY = Math.floor(minGapTop + Math.random() * (maxGapTop - minGapTop));
-    }
+    // Generate first gap in safe middle range
+    targetGapY = Math.floor(safeMinGapTop + Math.random() * (safeMaxGapTop - safeMinGapTop));
     
     const screenPercent = ((targetGapY / SCREEN_HEIGHT) * 100).toFixed(1);
-    console.log(`🎯 Initial gap at Y=${targetGapY} (${screenPercent}% screen height, range=${minGapTop}-${maxGapTop})`);
+    console.log(`🎯 Safe initial gap at Y=${targetGapY} (${screenPercent}% screen height, safe range=${safeMinGapTop}-${safeMaxGapTop})`);
   }
   
   // Add subtle randomization for natural feel
